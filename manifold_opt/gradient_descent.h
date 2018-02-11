@@ -52,7 +52,6 @@ void descent_opt(P& iterate, Evaluator<P, V> evaluator, Retraction<P, V> retract
 		if (it > 0) 
 			step_size = retraction.calculate_BB_step_size(iterate, temporary_iterate, grad, prev_grad, it);
 		iterate = temporary_iterate;
-		printf("%d %lf %lf \n", it, sqrt(grad_norm_sq), step_size);
 		
                 // Calculate retraction. Decrease step size until non-monotone Armijo condition is satisfied.
                 bool done = false;

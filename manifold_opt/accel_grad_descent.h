@@ -17,16 +17,6 @@ The functions return the number of iterations required to achieve convergence.
 namespace manifold_opt {
 namespace accel_grad_descent {
 
-void Print(const std::vector<std::vector<double> >& V) {
-	for (int i = 0; i < V.size(); ++i) {
-		for (int j = 0; j < V[i].size(); ++j) {
-			printf("%lf ", V[i][j]);
-		}
-		printf("\n");
-	}
-	printf("\n");
-}
-
 // If information on the smoothness is known, it can be passed as a parameter.
 template<template<class, class> class Evaluator, template<class, class> class Retraction, class P, class V>
 int accel_opt(P& iterate, Evaluator<P, V> evaluator, Retraction<P, V> retraction, double gtol = 1e-4, double smoothness = 0) {
@@ -68,10 +58,6 @@ int accel_opt(P& iterate, Evaluator<P, V> evaluator, Retraction<P, V> retraction
                                 else step_size /= eta;
                                 temporary_iterate = y_iterate;
 			} else {
-//					printf("%1.30lf %3.30lf %3.30lf \n", step_size, (Fval - F) / (step_size * grad_norm_sq), sqrt(grad_norm_sq));
-//					Print(y_iterate); printf("%lf \n \n", Fval);
-//					Print(temporary_iterate); printf("%lf \n\n", F);
-//					Print(grad);
 				if (F <= Fval - rho * step_size * grad_norm_sq) {
 					done = true;
 				} else {
@@ -81,7 +67,6 @@ int accel_opt(P& iterate, Evaluator<P, V> evaluator, Retraction<P, V> retraction
 			}
 		}
 		if (sqrt(grad_norm_sq) < gtol) {iterate = temporary_iterate; return it;}
-                printf("%d %d %1.30lf %1.30lf \n", it, k, sqrt(grad_norm_sq), step_size);
 
                 // Restart if there is not a sufficient decrease.
                 if (evaluator.evaluate(temporary_iterate) > evaluator.evaluate(iterate) - restart_rho * step_size * grad_norm_sq) {
