@@ -50,7 +50,7 @@ void descent_opt(P& iterate, Evaluator<P, V> evaluator, Retraction<P, V> retract
 		// Calculate BB step size. This is done entirely by the class responsible for the retraction.
 		// It is passed as imput the previous and current iterates and the previous and current gradients.
 		if (it > 0) 
-			step_size = retraction.calculate_BB_step_size(iterate, temporary_iterate, grad, prev_grad, it);
+			step_size = retraction.calculate_BB_step_size(temporary_iterate, iterate, grad, prev_grad, it);
 		iterate = temporary_iterate;
 		
                 // Calculate retraction. Decrease step size until non-monotone Armijo condition is satisfied.

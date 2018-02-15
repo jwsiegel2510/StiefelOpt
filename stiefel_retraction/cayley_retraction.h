@@ -7,20 +7,16 @@ Implements a retraction on the Stiefel manifold using the Cayley transform.
 #define _STIEFEL_RETRACTION_CAYLEY_RETRACTION__
 
 #include "../Eigen/Dense"
-#include "../util/base/vector_ops.h"
-#include <vector>
 
 namespace {
 	using ::Eigen::MatrixXd;
 	using ::Eigen::HouseholderQR;
-        using namespace ::util::base::vector_ops;
-        using std::vector;
 }
 
 namespace stiefel_retraction {
 namespace cayley_retraction {
 
-template<class P = vector<vector<double> >, class V = vector<vector<double> > > class CayleyRetraction {
+template<class P = MatrixXd, class V = MatrixXd > class CayleyRetraction {
 private:
 	MatrixXd U;
 	MatrixXd VM;
@@ -37,65 +33,37 @@ public:
 	double calculate_BB_step_size(const P& iterate, const P& prev_iterate, const V& grad, const V& prev_grad, int it);
 };
 
-template<> void CayleyRetraction<>::retract(vector<vector<double> >& iterate, const vector<vector<double> >& direction, double dt) {
-	U.resize(iterate[0].size(), 2 * iterate.size());
-	VM.resize(iterate[0].size(), 2 * iterate.size());
-	X.resize(iterate[0].size(), iterate.size());
-	for (int i = 0; i < iterate.size(); ++i) {
-		for (int j = 0; j < iterate[i].size(); ++j) {
-			U(j , i) = -0.5 * dt * iterate[i][j];
-			VM(j, i + iterate.size()) = iterate[i][j];
-			U(j, i + iterate.size()) = -0.5 * dt * direction[i][j];
-			VM(j , i) = -1.0 * direction[i][j];
-			X(j , i) = iterate[i][j];
-		}
-	}
-	X = X - 2.0 * U * (MatrixXd::Identity(2 * iterate.size(), 2 * iterate.size()) + VM.transpose() * U).colPivHouseholderQr().solve(VM.transpose() * X);
-	HouseholderQR<MatrixXd> hh(X);
-	X = hh.householderQ() * MatrixXd::Identity(iterate[0].size(), iterate.size());
-	for (int i = 0; i < iterate.size(); ++i) {
-		for (int j = 0; j < iterate[i].size(); ++j) {
-			iterate[i][j] = X(j , i);	
-		}
-	}
+template<> void CayleyRetraction<>::retract(MatrixXd& iterate, const MatrixXd& direction, double dt) {
+	U.resize(iterate.rows(), 2 * iterate.cols());
+	VM.resize(iterate.rows(), 2 * iterate.cols());
+	U.block(0, 0, iterate.rows(), iterate.cols()) = -0.5 * dt * direction;
+	U.block(0, iterate.cols(), iterate.rows(), iterate.cols()) = 0.5 * dt * iterate;
+	VM.block(0, 0, iterate.rows(), iterate.cols() = iterate;
+	VM.block(0, iterate.cols(), iterate.rows(), iterate.cols()) = direction;
+	iterate = iterate - 2.0 * U * (MatrixXd::Identity(2 * iterate.size(), 2 * iterate.size()) + VM.transpose() * U).colPivHouseholderQr().solve(VM.transpose() * iterate);
+	HouseholderQR<MatrixXd> hh(iterate);
+	iterate = hh.householderQ() * MatrixXd::Identity(iterate[0].size(), iterate.size());
 }
 
-template<> double CayleyRetraction<>::calculate_BB_step_size(const vector<vector<double> >& prev_iterate, const vector<vector<double> >& iterate,
-                                                        const vector<vector<double> >& grad, const vector<vector<double> >& prev_grad, int it) {
-        return (it%2) ? dot(iterate - prev_iterate, iterate - prev_iterate) /
-                     dot(iterate - prev_iterate, grad - prev_grad)
-                   : dot(iterate - prev_iterate, grad - prev_grad) /
-                     dot(grad - prev_grad, grad - prev_grad);
+template<> double CayleyRetraction<>::calculate_BB_step_size(const MatrixXd& iterate, const MatrixXd& prev_iterate,
+                                                        const MatrixXd& grad, const MatrixXd& prev_grad, int it) {
+        return (it%2) ?  ((iterate - prev_iterate).transpose() * (iterate - prev_iterate)).trace() / 
+                     ((iterate - prev_iterate).transpose() * (grad - prev_grad)).trace()
+                   : ((iterate - prev_iterate).transpose() * (grad - prev_grad)).trace() /
+                     ((grad - prev_grad).transpose() * (grad - prev_grad)).trace();
 }
 
-template<> double CayleyRetraction<>::norm_sq(const vector<vector<double> >& grad, const vector<vector<double> >& iterate) {
-        vector<vector<double> > temp(grad);
-        for (int i = 0; i < grad.size(); ++i) {
-                for (int j = 0; j < grad.size(); ++j) {
-                        temp[i] -= iterate[j] * dot(grad[j], iterate[i]);
-                }
-        }
-        return dot(temp, temp);
+template<> double CayleyRetraction<>::norm_sq(MatrixXd& grad, const MatrixXd& iterate) {
+        X.resize(grad.rows(), grad.cols());
+	X = grad;
+	X -= iterate * grad.transpose() * iterate;
+        return (X.transpose() * X).trace();
 }
 
-template<> void CayleyRetraction<>::apply_momentum(vector<vector<double> >& y_iterate, vector<vector<double> >& iterate, vector<vector<double> >& temporary_iterate, double beta) {
-	X.resize(iterate[0].size(), iterate.size());
-	Y.resize(y_iterate[0].size(), y_iterate.size());
-	TV.resize(iterate[0].size(), iterate.size());
-	for (int i = 0; i < iterate.size(); ++i) {
-		for (int j = 0; j < iterate[i].size(); ++j) {
-			X(j , i) = iterate[i][j];
-			Y(j , i) = temporary_iterate[i][j];
-		}
-	}
+template<> void CayleyRetraction<>::apply_momentum(MatrixXd& y_iterate, MatrixXd& iterate, MatrixXd& temporary_iterate, double beta) {
 	y_iterate = iterate;
 	iterate = temporary_iterate;
-	TV = 2.0 * (MatrixXd::Identity(iterate.size(), iterate.size()) + X.transpose() * Y).colPivHouseholderQr().solve(Y.transpose()).transpose();
-	for (int i = 0; i < iterate.size(); ++i) {
-		for (int j = 0; j < iterate[i].size(); ++j) {
-			temporary_iterate[i][j] = TV(j , i);
-		}
-	}
+	temporary_iterate = 2.0 * (MatrixXd::Identity(iterate.size(), iterate.size()) + y_iterate.transpose() * iterate).colPivHouseholderQr().solve(iterate.transpose()).transpose();
 	retract(y_iterate, temporary_iterate, 1.0 + beta);
 }
 
