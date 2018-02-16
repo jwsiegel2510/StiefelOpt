@@ -26,7 +26,7 @@ public:
 		double ans = 0;
 		for (int i = 0; i < input.rows(); ++i) {
 			for (int j = 0; j < input.cols(); ++j) {
-				ans += i * input(i,j) * input(i,j);
+				ans += i * (j + 1) * input(i,j) * input(i,j);
 			}
 		}
 		return ans;
@@ -36,7 +36,7 @@ public:
 		grad.resize(input.rows(), input.cols());
                 for (int i = 0; i < input.rows(); ++i) {
                         for (int j = 0; j < input.cols(); ++j) {
-                                grad(i,j) = i * input(i,j);
+                                grad(i,j) = 2 * i * (j + 1) * input(i,j);
                         }
                 }
 	}
@@ -49,7 +49,7 @@ int main() {
 	srand(time(NULL)); // initialize random seed.
 	EigenvectorObjective<> evaluator;
 	MatrixXd iterate;
-	for (int i = 100; i < 1000; ++i) {
+	for (int i = 100; i < 1000; i *= 1.3) {
 		iterate.resize(i + 1, k); // Initialize iterate to be a uniformly random point on the Stiefel manifold.
 		for (int j = 0; j < i + 1; ++j) {
 			for (int l = 0; l < k; ++l) {
@@ -59,7 +59,13 @@ int main() {
 			}
 		}
 		HouseholderQR<MatrixXd> hh(iterate);
-		iterate = hh.householderQ() * MatrixXd::Identity(iterate[0].size(), iterate.size());
-		printf("%d %d ", i, accel_opt(iterate, evaluator, CayleyRetraction<>(), 1e-3, i + 1));
+		iterate = hh.householderQ() * MatrixXd::Identity(iterate.rows(), iterate.cols());
+		printf("%d %d \n", i, accel_opt(iterate, evaluator, CayleyRetraction<>(), 1e-3, i * (k + 1)));
+		for (int l = 0; l < k; ++l) {
+			for (int j = 0; j < 17; ++j) {
+				printf("%lf ", iterate(j,l));
+			}
+			printf("\n");
+		}
 	}
 }

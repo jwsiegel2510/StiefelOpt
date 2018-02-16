@@ -21,8 +21,6 @@ private:
 	MatrixXd U;
 	MatrixXd VM;
 	MatrixXd X;
-	MatrixXd Y;
-	MatrixXd TV;
 public:
         void retract(P& iterate, const V& direction, double dt);
         // Sets temporary_iterate equal to the tangent vector correponding to
@@ -38,11 +36,11 @@ template<> void CayleyRetraction<>::retract(MatrixXd& iterate, const MatrixXd& d
 	VM.resize(iterate.rows(), 2 * iterate.cols());
 	U.block(0, 0, iterate.rows(), iterate.cols()) = -0.5 * dt * direction;
 	U.block(0, iterate.cols(), iterate.rows(), iterate.cols()) = 0.5 * dt * iterate;
-	VM.block(0, 0, iterate.rows(), iterate.cols() = iterate;
+	VM.block(0, 0, iterate.rows(), iterate.cols()) = iterate;
 	VM.block(0, iterate.cols(), iterate.rows(), iterate.cols()) = direction;
-	iterate = iterate - 2.0 * U * (MatrixXd::Identity(2 * iterate.size(), 2 * iterate.size()) + VM.transpose() * U).colPivHouseholderQr().solve(VM.transpose() * iterate);
+	iterate = iterate - 2.0 * U * (MatrixXd::Identity(2 * iterate.cols(), 2 * iterate.cols()) + VM.transpose() * U).colPivHouseholderQr().solve(VM.transpose() * iterate);
 	HouseholderQR<MatrixXd> hh(iterate);
-	iterate = hh.householderQ() * MatrixXd::Identity(iterate[0].size(), iterate.size());
+	iterate = hh.householderQ() * MatrixXd::Identity(iterate.rows(), iterate.cols());
 }
 
 template<> double CayleyRetraction<>::calculate_BB_step_size(const MatrixXd& iterate, const MatrixXd& prev_iterate,
@@ -53,17 +51,17 @@ template<> double CayleyRetraction<>::calculate_BB_step_size(const MatrixXd& ite
                      ((grad - prev_grad).transpose() * (grad - prev_grad)).trace();
 }
 
-template<> double CayleyRetraction<>::norm_sq(MatrixXd& grad, const MatrixXd& iterate) {
+template<> double CayleyRetraction<>::norm_sq(const MatrixXd& grad, const MatrixXd& iterate) {
         X.resize(grad.rows(), grad.cols());
 	X = grad;
-	X -= iterate * grad.transpose() * iterate;
+	X -= iterate * (grad.transpose() * iterate);
         return (X.transpose() * X).trace();
 }
 
 template<> void CayleyRetraction<>::apply_momentum(MatrixXd& y_iterate, MatrixXd& iterate, MatrixXd& temporary_iterate, double beta) {
 	y_iterate = iterate;
 	iterate = temporary_iterate;
-	temporary_iterate = 2.0 * (MatrixXd::Identity(iterate.size(), iterate.size()) + y_iterate.transpose() * iterate).colPivHouseholderQr().solve(iterate.transpose()).transpose();
+	temporary_iterate = 2.0 * (MatrixXd::Identity(iterate.cols(), iterate.cols()) + y_iterate.transpose() * iterate).colPivHouseholderQr().solve(iterate.transpose()).transpose();
 	retract(y_iterate, temporary_iterate, 1.0 + beta);
 }
 

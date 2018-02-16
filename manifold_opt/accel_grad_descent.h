@@ -13,6 +13,7 @@ The functions return the number of iterations required to achieve convergence.
 
 #include<cstdio>
 #include<vector>
+#include<cmath>
 
 namespace manifold_opt {
 namespace accel_grad_descent {
