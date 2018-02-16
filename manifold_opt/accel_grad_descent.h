@@ -36,7 +36,7 @@ int accel_opt(P& iterate, Evaluator<P, V> evaluator, Retraction<P, V> retraction
 	double step_size = .1;
         bool increase = true; // Allow the step size to increase at the first iteration (if smoothness is not passed).
         bool dec_step_size = false; // Decrease the step size to see if the period increases by a large factor (if smoothness not passed). 
-        int prev_period;
+	int prev_period;
 
 	int it = 1;
 	int k = 0;
@@ -58,14 +58,14 @@ int accel_opt(P& iterate, Evaluator<P, V> evaluator, Retraction<P, V> retraction
                                 if (F > Fval - rho * step_size * grad_norm_sq) increase = false;
                                 else step_size /= eta;
                                 temporary_iterate = y_iterate;
-			} else {
+			} else if (!smoothness_known) {
 				if (F <= Fval - rho * step_size * grad_norm_sq) {
 					done = true;
 				} else {
 					temporary_iterate = y_iterate;
 					step_size *= eta;
 				}
-			}
+			} else done = true;
 		}
 		if (sqrt(grad_norm_sq) < gtol) {iterate = temporary_iterate; return it;}
 

@@ -10,6 +10,7 @@ Tests the accelerated gradient descent with adaptive restart procedure on the ei
 #include <cstdlib>
 #include <ctime>
 #include <cmath>
+#include <unordered_map>
 
 namespace {
 	using ::manifold_opt::accel_grad_descent::accel_opt;
@@ -49,23 +50,23 @@ int main() {
 	srand(time(NULL)); // initialize random seed.
 	EigenvectorObjective<> evaluator;
 	MatrixXd iterate;
-	for (int i = 100; i < 1000; i *= 1.3) {
-		iterate.resize(i + 1, k); // Initialize iterate to be a uniformly random point on the Stiefel manifold.
-		for (int j = 0; j < i + 1; ++j) {
-			for (int l = 0; l < k; ++l) {
-				double theta = 2 * M_PI * ((double) rand()) / (RAND_MAX);
-				double r = ((double) rand()) / (RAND_MAX);
-				iterate(j,l) = sqrt(-log(r)) * sin(theta);
+	std::unordered_map<int, double> iterations;
+	for (int q = 0; q < 20; ++q) { // Calculate the average number of iterations over 20 trials.
+		for (int i = 100; i < 10000; i *= 2) {
+			iterate.resize(i + 1, k); // Initialize iterate to be a uniformly random point on the Stiefel manifold.
+			for (int j = 0; j < i + 1; ++j) {
+				for (int l = 0; l < k; ++l) {
+					double theta = 2 * M_PI * ((double) rand()) / (RAND_MAX);
+					double r = ((double) rand()) / (RAND_MAX);
+					iterate(j,l) = sqrt(-log(r)) * sin(theta);
+				}
 			}
+			HouseholderQR<MatrixXd> hh(iterate);
+			iterate = hh.householderQ() * MatrixXd::Identity(iterate.rows(), iterate.cols());
+			iterations[i] += accel_opt(iterate, evaluator, CayleyRetraction<>(), 1e-3, i * (k + 1));
 		}
-		HouseholderQR<MatrixXd> hh(iterate);
-		iterate = hh.householderQ() * MatrixXd::Identity(iterate.rows(), iterate.cols());
-		printf("%d %d \n", i, accel_opt(iterate, evaluator, CayleyRetraction<>(), 1e-3, i * (k + 1)));
-		for (int l = 0; l < k; ++l) {
-			for (int j = 0; j < 17; ++j) {
-				printf("%lf ", iterate(j,l));
-			}
-			printf("\n");
-		}
+	}
+	for (int i = 100; i < 10000; i *= 2) {
+		printf("%d %lf \n", i, iterations[i] / 20);
 	}
 }

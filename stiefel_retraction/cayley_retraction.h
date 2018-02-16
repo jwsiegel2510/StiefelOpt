@@ -59,10 +59,14 @@ template<> double CayleyRetraction<>::norm_sq(const MatrixXd& grad, const Matrix
 }
 
 template<> void CayleyRetraction<>::apply_momentum(MatrixXd& y_iterate, MatrixXd& iterate, MatrixXd& temporary_iterate, double beta) {
-	y_iterate = iterate;
+	/* y_iterate = iterate;
 	iterate = temporary_iterate;
 	temporary_iterate = 2.0 * (MatrixXd::Identity(iterate.cols(), iterate.cols()) + y_iterate.transpose() * iterate).colPivHouseholderQr().solve(iterate.transpose()).transpose();
-	retract(y_iterate, temporary_iterate, 1.0 + beta);
+	retract(y_iterate, temporary_iterate, 1.0 + beta); */
+	y_iterate = (1.0 + beta) * temporary_iterate - beta * iterate;
+        HouseholderQR<MatrixXd> hh(y_iterate);
+        y_iterate = hh.householderQ() * MatrixXd::Identity(y_iterate.rows(), y_iterate.cols());
+	iterate = temporary_iterate;
 }
 
 }
