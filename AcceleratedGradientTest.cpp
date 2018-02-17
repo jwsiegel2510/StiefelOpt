@@ -63,7 +63,7 @@ int main() {
 			}
 			HouseholderQR<MatrixXd> hh(iterate);
 			iterate = hh.householderQ() * MatrixXd::Identity(iterate.rows(), iterate.cols());
-			iterations[i] += accel_opt(iterate, evaluator, CayleyRetraction<>(), 1e-3, i * (k + 1));
+			iterations[i] += accel_opt(iterate, evaluator, CayleyRetraction<>(), 1e-3, 1.5 * k * i);
 		}
 	}
 	for (int i = 100; i < 10000; i *= 2) {
