@@ -7,6 +7,7 @@ Implements a retraction on the Stiefel manifold using the Cayley transform.
 #define _STIEFEL_RETRACTION_CAYLEY_RETRACTION__
 
 #include "../Eigen/Dense"
+#include <cstdio>
 
 namespace {
 	using ::Eigen::MatrixXd;
@@ -32,12 +33,14 @@ public:
 };
 
 template<> void CayleyRetraction<>::retract(MatrixXd& iterate, const MatrixXd& direction, double dt) {
+	// For reasons of numerical stability, we must (approximately) project direction ont othe dual space.
+	X = direction - 0.5 * iterate * (iterate.transpose() * direction + direction.transpose() * iterate);
 	U.resize(iterate.rows(), 2 * iterate.cols());
 	VM.resize(iterate.rows(), 2 * iterate.cols());
-	U.block(0, 0, iterate.rows(), iterate.cols()) = -0.5 * dt * direction;
+	U.block(0, 0, iterate.rows(), iterate.cols()) = -0.5 * dt * X;
 	U.block(0, iterate.cols(), iterate.rows(), iterate.cols()) = 0.5 * dt * iterate;
 	VM.block(0, 0, iterate.rows(), iterate.cols()) = iterate;
-	VM.block(0, iterate.cols(), iterate.rows(), iterate.cols()) = direction;
+	VM.block(0, iterate.cols(), iterate.rows(), iterate.cols()) = X;
 	iterate = iterate - 2.0 * U * (MatrixXd::Identity(2 * iterate.cols(), 2 * iterate.cols()) + VM.transpose() * U).colPivHouseholderQr().solve(VM.transpose() * iterate);
 	HouseholderQR<MatrixXd> hh(iterate);
 	iterate = hh.householderQ() * MatrixXd::Identity(iterate.rows(), iterate.cols());
@@ -58,15 +61,18 @@ template<> double CayleyRetraction<>::norm_sq(const MatrixXd& grad, const Matrix
         return (X.transpose() * X).trace();
 }
 
-template<> void CayleyRetraction<>::apply_momentum(MatrixXd& y_iterate, MatrixXd& iterate, MatrixXd& temporary_iterate, double beta) {
+template<> void CayleyRetraction<>::apply_momentum(MatrixXd& y_iterate, MatrixXd& iterate, MatrixXd& temporary_iterate, double beta) {	
 	y_iterate = iterate;
+	for (int i = 0; i < iterate.cols(); ++i) {
+		if (temporary_iterate.col(i).dot(iterate.col(i)) < 0) temporary_iterate.col(i) *= -1.0;
+	}
 	iterate = temporary_iterate;
-	temporary_iterate = 2.0 * (MatrixXd::Identity(iterate.cols(), iterate.cols()) + iterate.transpose() * y_iterate).colPivHouseholderQr().solve(iterate.transpose()).transpose();
+	temporary_iterate = 2.0 * (MatrixXd::Identity(iterate.cols(), iterate.cols()) + iterate.transpose() * y_iterate).colPivHouseholderQr().solve(
+		(iterate - y_iterate + .75 * y_iterate * (MatrixXd::Identity(iterate.cols(), iterate.cols()) - y_iterate.transpose() * iterate))
+			.transpose()).transpose();
+	temporary_iterate += 0.5 * (MatrixXd::Identity(iterate.cols(), iterate.cols()) + y_iterate.transpose() * iterate).colPivHouseholderQr().solve(
+		(y_iterate * (MatrixXd::Identity(iterate.cols(), iterate.cols()) - iterate.transpose() * y_iterate)).transpose()).transpose();
 	retract(y_iterate, temporary_iterate, 1.0 + beta); 
-	/* y_iterate = (1.0 + beta) * temporary_iterate - beta * iterate;
-        HouseholderQR<MatrixXd> hh(y_iterate);
-        y_iterate = hh.householderQ() * MatrixXd::Identity(y_iterate.rows(), y_iterate.cols());
-	iterate = temporary_iterate;*/
 }
 
 }

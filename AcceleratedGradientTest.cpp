@@ -51,7 +51,8 @@ int main() {
 	EigenvectorObjective<> evaluator;
 	MatrixXd iterate;
 	std::unordered_map<int, double> iterations;
-	for (int q = 0; q < 20; ++q) { // Calculate the average number of iterations over 20 trials.
+	for (int q = 0; q < 1; ++q) { // Calculate the average number of iterations over 20 trials.
+		printf("%d \n", q);
 		for (int i = 100; i < 10000; i *= 2) {
 			iterate.resize(i + 1, k); // Initialize iterate to be a uniformly random point on the Stiefel manifold.
 			for (int j = 0; j < i + 1; ++j) {
@@ -63,10 +64,10 @@ int main() {
 			}
 			HouseholderQR<MatrixXd> hh(iterate);
 			iterate = hh.householderQ() * MatrixXd::Identity(iterate.rows(), iterate.cols());
-			iterations[i] += accel_opt(iterate, evaluator, CayleyRetraction<>(), 1e-5, 1.5 * k * i);
+			iterations[i] += accel_opt(iterate, evaluator, CayleyRetraction<>(), 1e-3, 1.5 * k * i);
 		}
 	}
 	for (int i = 100; i < 10000; i *= 2) {
-		printf("%d %lf \n", i, iterations[i] / 20);
+		printf("%d %lf \n", i, iterations[i] / 1);
 	}
 }
