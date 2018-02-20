@@ -41,9 +41,7 @@ template<> void CayleyRetraction<>::retract(MatrixXd& iterate, const MatrixXd& d
 	U.block(0, iterate.cols(), iterate.rows(), iterate.cols()) = 0.5 * dt * iterate;
 	VM.block(0, 0, iterate.rows(), iterate.cols()) = iterate;
 	VM.block(0, iterate.cols(), iterate.rows(), iterate.cols()) = X;
-	iterate = iterate - 2.0 * U * (MatrixXd::Identity(2 * iterate.cols(), 2 * iterate.cols()) + VM.transpose() * U).colPivHouseholderQr().solve(VM.transpose() * iterate);
-	HouseholderQR<MatrixXd> hh(iterate);
-	iterate = hh.householderQ() * MatrixXd::Identity(iterate.rows(), iterate.cols());
+	iterate = iterate - 2.0 * U * (MatrixXd::Identity(2 * iterate.cols(), 2 * iterate.cols()) + VM.transpose() * U).partialPivLu().solve(VM.transpose() * iterate);
 }
 
 template<> double CayleyRetraction<>::calculate_BB_step_size(const MatrixXd& iterate, const MatrixXd& prev_iterate,
@@ -67,11 +65,11 @@ template<> void CayleyRetraction<>::apply_momentum(MatrixXd& y_iterate, MatrixXd
 		if (temporary_iterate.col(i).dot(iterate.col(i)) < 0) temporary_iterate.col(i) *= -1.0;
 	}
 	iterate = temporary_iterate;
-	temporary_iterate = 2.0 * (MatrixXd::Identity(iterate.cols(), iterate.cols()) + iterate.transpose() * y_iterate).colPivHouseholderQr().solve(
-		(iterate - y_iterate + .75 * y_iterate * (MatrixXd::Identity(iterate.cols(), iterate.cols()) - y_iterate.transpose() * iterate))
+	temporary_iterate = 2.0 * (MatrixXd::Identity(iterate.cols(), iterate.cols()) + iterate.transpose() * y_iterate).partialPivLu().solve(
+		(iterate/* - y_iterate + .75 * y_iterate * (MatrixXd::Identity(iterate.cols(), iterate.cols()) - y_iterate.transpose() * iterate)*/)
 			.transpose()).transpose();
-	temporary_iterate += 0.5 * (MatrixXd::Identity(iterate.cols(), iterate.cols()) + y_iterate.transpose() * iterate).colPivHouseholderQr().solve(
-		(y_iterate * (MatrixXd::Identity(iterate.cols(), iterate.cols()) - iterate.transpose() * y_iterate)).transpose()).transpose();
+	/* temporary_iterate += 0.5 * (MatrixXd::Identity(iterate.cols(), iterate.cols()) + y_iterate.transpose() * iterate).colPivHouseholderQr().solve(
+		(y_iterate * (MatrixXd::Identity(iterate.cols(), iterate.cols()) - iterate.transpose() * y_iterate)).transpose()).transpose();*/
 	retract(y_iterate, temporary_iterate, 1.0 + beta); 
 }
 

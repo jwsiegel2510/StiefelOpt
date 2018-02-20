@@ -47,13 +47,16 @@ int main() {
 	int k;
 	printf("Input the number of eigenvectors to be calculated.\n");
 	scanf("%d", &k);
+	FILE* output = fopen(("output_" + std::to_string(k) + ".txt").c_str(), "w");
+	if (output == NULL) return 1;
 	srand(time(NULL)); // initialize random seed.
 	EigenvectorObjective<> evaluator;
 	MatrixXd iterate;
 	std::unordered_map<int, double> iterations;
-	for (int q = 0; q < 1; ++q) { // Calculate the average number of iterations over 20 trials.
+	for (int q = 0; q < 20; ++q) { // Calculate the average number of iterations over 20 trials.
 		printf("%d \n", q);
-		for (int i = 100; i < 10000; i *= 2) {
+		for (int i = 100; i < 20000; i *= 1.4) {
+			printf("%d ", i);
 			iterate.resize(i + 1, k); // Initialize iterate to be a uniformly random point on the Stiefel manifold.
 			for (int j = 0; j < i + 1; ++j) {
 				for (int l = 0; l < k; ++l) {
@@ -64,10 +67,19 @@ int main() {
 			}
 			HouseholderQR<MatrixXd> hh(iterate);
 			iterate = hh.householderQ() * MatrixXd::Identity(iterate.rows(), iterate.cols());
-			iterations[i] += accel_opt(iterate, evaluator, CayleyRetraction<>(), 1e-3, 1.5 * k * i);
+			int t = accel_opt(iterate, evaluator, CayleyRetraction<>(), 1e-3, 1.5 * k * i);
+			iterations[i] += t;
+			printf("%d \n", t);
+			for (int j = 0; j < k; ++j) {
+				for (int l = 0; l < k; ++l) {
+					printf("%.5e ", iterate.col(j).dot(iterate.col(l)));
+				}
+				printf("\n");
+			}
 		}
 	}
-	for (int i = 100; i < 10000; i *= 2) {
-		printf("%d %lf \n", i, iterations[i] / 1);
+	for (int i = 100; i < 20000; i *= 1.4) {
+		fprintf(output, "%d %lf \n", i, iterations[i] / 20);
 	}
+	fclose(output);
 }
