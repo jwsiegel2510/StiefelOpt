@@ -1,0 +1,4 @@
+Contains an implementation of the Accelerated Gradient descent method on the Stiefel manifold.
+
+The most efficient implementation is the mex-cpp file which must be compiled together with
+the ROPTLIB library.
