@@ -43,10 +43,12 @@ double ProjectGradAndReturnNormSq(const StieVariable* StieY, StieVector* StieGra
     
     dgemm_(transt, transn, &p, &p, &n, &one, const_cast<double *> (G), &n, const_cast<double *> (Y), &n, &zero, symUtV, &p);
 
+    double Gnormsq = 0;
     for (integer i = 0; i < p; i++)
     {
         for (integer j = i + 1; j < p; j++)
         {
+            Gnormsq += 0.5 * (symUtV[i + j * p] - symUtV[j + i * p]) * (symUtV[i + j * p] - symUtV[j + i * p]);
             symUtV[i + j * p] = 0.5 * symUtV[i + j * p] + 0.5 * symUtV[j + i * p];
             symUtV[j + i * p] = symUtV[i + j * p];
         }
@@ -56,12 +58,7 @@ double ProjectGradAndReturnNormSq(const StieVariable* StieY, StieVector* StieGra
     
     // Calculate squared norm.
     integer len = n*p; integer inc = 1;
-    double Gnormsq = ddot_(&len, const_cast<double *> (G), &inc, const_cast<double *> (G), &inc);
-    
-    dgemm_(transt, transn, &p, &p, &n, &one, const_cast<double *> (G), &n, const_cast<double *> (Y), &n, &zero, symUtV, &p);
-    
-    len = p*p; inc = 1;
-    Gnormsq += ddot_(&len, symUtV, &inc, symUtV, &inc);
+    Gnormsq += ddot_(&len, const_cast<double *> (G), &inc, const_cast<double *> (G), &inc);
     
     return Gnormsq;
 }
@@ -366,7 +363,7 @@ int AcceleratedGradDescentFunctionRestart(StieVariable* StieX, Problem* Prob, do
         retract(&StieY, &StieGrad, StieX, -1.0 * step_size, YV, VY, YVVY, VYY, pivots, n, p);
         FX = Prob->f(StieX); ++(*nf);
         
-        while (FX < FY - 0.7 * step_size * GnormSq) {
+        while (FX < FY - 0.9 * step_size * GnormSq) {
             step_size *= alpha;
             retract(&StieY, &StieGrad, StieX, -1.0 * step_size, YV, VY, YVVY, VYY, pivots, n, p);
             FX = Prob->f(StieX); ++(*nf);
